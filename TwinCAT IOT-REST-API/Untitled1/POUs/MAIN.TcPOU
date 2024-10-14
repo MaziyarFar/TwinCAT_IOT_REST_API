@@ -1,0 +1,152 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.13">
+  <POU Name="MAIN" Id="{69930fcc-4ccd-4371-8944-33e8c0b2d73b}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM MAIN
+VAR
+	
+	httpClient : FB_IotHttpClient :=(sHostName:='postman-echo.com',bKeepAlive:=TRUE ,tConnectionTimeout:=T#10S);
+	
+	request			: FB_IotHttpRequest;
+	trigger : BOOL ;
+	state : (INIT, SEND_REQUEST, WAIT_FOR_RESPONS, READ_RESPONSE, ERROR);
+	debugRequestContent : STRING(511);
+	jsonParser : FB_JsonDomParser;
+	jsonDocument : SJsonValue;
+	jsonArgsMember : SJsonValue;
+	jsonFoo2Member : SJsonValue;
+	result : STRING ; 
+	isBusy : BOOL;
+	
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[//init client parameters at startup
+IF NOT httpClient.bConfigured THEN
+httpClient.nHostPort:= 443; // Default 80
+//httpClient.stTLS.bNoServerCertCheck:= TRUE;
+END_IF
+
+IF httpClient.bConfigured THEN
+	
+	CASE state OF
+		
+	INIT:
+	
+		IF trigger THEN
+			
+			state :=  SEND_REQUEST;	
+			trigger := FALSE;
+			
+		END_IF
+	
+	SEND_REQUEST:
+	
+		IF request.SendRequest(sUri:='/get?foo1=bar1&foo2=bar2', fbClient:=httpClient, eRequestType:=ETcIotHttpRequestType.HTTP_Get, 0, 0, 0) THEN
+			
+			isBusy := request.bBusy;				
+			state := WAIT_FOR_RESPONS;
+			
+		END_IF
+	WAIT_FOR_RESPONS:
+		
+		IF request.bError THEN
+			state := ERROR;
+		END_IF
+	
+		IF NOT request.bBusy THEN // remove NOT to test 																																																																																																																	
+			state :=  READ_RESPONSE;
+		END_IF
+		
+		
+	READ_RESPONSE:
+	
+		request.GetContent(pContent:= ADR(debugRequestContent), nContentSize:= SIZEOF(debugRequestContent), bSetNullTermination:= TRUE);
+		IF request.nStatusCode >= 200 AND request.nStatusCode < 300 THEN
+			jsonDocument:= request.GetJsonDomContent(jsonParser);
+			IF jsonDocument <> 0 THEN
+				IF jsonParser.HasMember(jsonDocument, 'args')  THEN
+					jsonArgsMember:= jsonParser.FindMember(jsonDocument, 'args');
+					IF jsonParser.HasMember(jsonArgsMember, 'foo2')  THEN
+						jsonFoo2Member:= jsonParser.FindMember(jsonArgsMember, 'foo2');
+								 					
+						IF jsonParser.IsString(jsonFoo2Member) THEN							
+							result:= jsonParser.GetString(jsonFoo2Member);									
+						END_IF
+					END_IF
+					
+				END_IF
+				
+			END_IF
+					
+		END_IF
+		state:= INIT;
+		
+	ERROR:
+		//
+		
+	END_CASE
+END_IF
+
+httpClient.Execute();]]></ST>
+    </Implementation>
+    <LineIds Name="MAIN">
+      <LineId Id="9" Count="0" />
+      <LineId Id="210" Count="1" />
+      <LineId Id="213" Count="0" />
+      <LineId Id="206" Count="0" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="27" Count="0" />
+      <LineId Id="116" Count="0" />
+      <LineId Id="72" Count="0" />
+      <LineId Id="246" Count="0" />
+      <LineId Id="73" Count="0" />
+      <LineId Id="238" Count="0" />
+      <LineId Id="118" Count="0" />
+      <LineId Id="244" Count="0" />
+      <LineId Id="119" Count="1" />
+      <LineId Id="245" Count="0" />
+      <LineId Id="181" Count="0" />
+      <LineId Id="121" Count="1" />
+      <LineId Id="237" Count="0" />
+      <LineId Id="126" Count="0" />
+      <LineId Id="243" Count="0" />
+      <LineId Id="242" Count="0" />
+      <LineId Id="125" Count="0" />
+      <LineId Id="233" Count="0" />
+      <LineId Id="130" Count="1" />
+      <LineId Id="235" Count="0" />
+      <LineId Id="249" Count="1" />
+      <LineId Id="248" Count="0" />
+      <LineId Id="247" Count="0" />
+      <LineId Id="146" Count="1" />
+      <LineId Id="141" Count="0" />
+      <LineId Id="144" Count="0" />
+      <LineId Id="137" Count="0" />
+      <LineId Id="139" Count="0" />
+      <LineId Id="236" Count="0" />
+      <LineId Id="150" Count="0" />
+      <LineId Id="133" Count="0" />
+      <LineId Id="132" Count="0" />
+      <LineId Id="157" Count="0" />
+      <LineId Id="160" Count="0" />
+      <LineId Id="163" Count="0" />
+      <LineId Id="165" Count="2" />
+      <LineId Id="169" Count="1" />
+      <LineId Id="164" Count="0" />
+      <LineId Id="173" Count="0" />
+      <LineId Id="161" Count="1" />
+      <LineId Id="158" Count="1" />
+      <LineId Id="123" Count="0" />
+      <LineId Id="81" Count="0" />
+      <LineId Id="175" Count="0" />
+      <LineId Id="240" Count="0" />
+      <LineId Id="177" Count="0" />
+      <LineId Id="179" Count="0" />
+      <LineId Id="176" Count="0" />
+      <LineId Id="174" Count="0" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="180" Count="0" />
+      <LineId Id="13" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>
